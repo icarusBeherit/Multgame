@@ -5,20 +5,38 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 
 public class SelectActivity extends AppCompatActivity implements View.OnClickListener {
@@ -53,8 +71,13 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
     Button submit;
     Button clear;
     String instituicao;
-    String valor_atual;
-    EditText valor;
+    String valor_campeao_hora;
+    EditText valorCampeaoHora;
+    double valor_doacao=0;
+    String item_instituicao;
+    TextView doacao;
+    CheckBox campeaoDaHoracheckBox;
+    Util util;
 
 
     @Override
@@ -62,32 +85,52 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select);
 
+        util = new Util();
+
         editor = getSharedPreferences(Myprefs, MODE_PRIVATE).edit();
         prefs = getSharedPreferences(Myprefs, MODE_PRIVATE);
-
         instituicao = prefs.getString("instituicao", "");
-        valor_atual = prefs.getString("item", "");
-        valor= findViewById(R.id.valor);
+        item_instituicao = prefs.getString("item", "");
+        valor_campeao_hora = prefs.getString("valor_campeao_hora", "");
+
+        valorCampeaoHora = findViewById(R.id.valorCampeaoHora);
+
+        submit = findViewById(R.id.submit);
+        clear = findViewById(R.id.clear);
+        doacao = findViewById(R.id.doacao);
+
+        campeaoDaHoracheckBox = findViewById(R.id.campeaoDaHoracheckBox);
+        campeaoDaHoracheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+           @Override
+           public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
+               if (isChecked){
+                   valorCampeaoHora.setEnabled(true);
+                   valorCampeaoHora.setVisibility(View.VISIBLE);
+                   valorCampeaoHora.setText("1,00");
+                   doacao.setText("R$1,00");
+                   editor.putString("valor","1.00");
+                   editor.apply();
+               }
+               else
+               {
+                   valorCampeaoHora.setEnabled(false);
+                   valorCampeaoHora.setVisibility(View.INVISIBLE);
+                   editor.putString("valor","");
+                   doacao.setText("R$0,00");
+                   editor.apply();
+               }
+           }
+       }
+        );
 
         getSupportActionBar().setTitle("Doação");
         getSupportActionBar().setSubtitle(instituicao);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        submit = findViewById(R.id.submit);
-        clear = findViewById(R.id.clear);
-
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                submitData();
-
-            }
-        });
-
-        clear.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                clearAllSharedPreferences();
+               checkFields();
             }
         });
 
@@ -140,9 +183,62 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
        //
 
         checkSharedPreferences();
-        checkRow1();
-        checkRow2();
 
+    }
+
+
+    private void checkFields() {
+
+        if (verificaCampeaoHora()){
+            openDialog();
+        }
+        else{
+            if(checkRow1() || checkRow2() || checkRow3() || checkRow4() || checkRow5()) {
+               openDialog();
+          }
+          else{
+              Toast.makeText(this, "Preencha pelo menos uma fileira de bandeiras ou escolha o campeão da hora para continuar", Toast.LENGTH_LONG).show();
+          }
+        }
+    }
+
+    private boolean verificaCampeaoHora() {
+        String valor_campeao_hora = prefs.getString("valor_campeao_hora", "");
+
+        if(imageView5.getDrawable()==null && valor_campeao_hora.equals("")){
+            return false;
+        }else{
+            return true;
+        }
+    }
+
+
+    private void openDialog() {
+
+        final View view = getLayoutInflater().inflate(R.layout.alert_dialog, null);
+
+        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+
+        final EditText nome = (EditText) view.findViewById(R.id.input_nome);
+        final EditText telefone = (EditText) view.findViewById(R.id.input_telefone);
+
+        alertDialog.setView(view);
+
+        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancelar",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        submitData();
+                    }
+                });
+
+        alertDialog.show();
 
     }
 
@@ -157,13 +253,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
     }
 
     public void submitData(){
-        SharedPreferences settings = getSharedPreferences(Myprefs, Context.MODE_PRIVATE);
-        settings.edit().clear().apply();
-        checkSharedPreferences();
 
-        Intent i = new Intent(getBaseContext(), PrintActivity.class);
-        finish();
-        startActivity(i);
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -177,6 +267,10 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         switch (item.getItemId()) {
             case R.id.change:
                 exibirInstituicoes();
+            return true;
+
+            case R.id.clear:
+                clearAllSharedPreferences();
             return true;
 
             default:
@@ -373,8 +467,6 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
 
         final String imagem_escolhida = getResources().getResourceEntryName(image_id);
 
-        String item_salvo = prefs.getString(imagem_escolhida, "");
-
         final String [] items = new String[] {" Argentina "," Brasil "," Chile "," Uruguai "," Colombia "," Itália "," Inglaterra "," Alemanha "," Espanha "," França "};
         final Integer[] icons = new Integer[] {R.drawable.argentina0, R.drawable.brasil1,R.drawable.chile2,R.drawable.uruguai3,R.drawable.colombia4,R.drawable.italia5,R.drawable.inglaterra6,R.drawable.alemanha7,R.drawable.espanha8,R.drawable.franca9};
         ListAdapter adapter = new ArrayAdapterWithIcon(this, items, icons);
@@ -440,8 +532,6 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
                 alertDialog1.dismiss();
                 editor.putString(imagem_escolhida, item_selecionado);
                 editor.apply();
-                checkRow1();
-                checkRow2();
 
             }
         });
@@ -460,13 +550,13 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
 
         AlertDialog.Builder builder = new AlertDialog.Builder(SelectActivity.this);
         builder.setTitle("Selecione uma opção");
-        builder.setSingleChoiceItems(items, Integer.parseInt(valor_atual), new DialogInterface.OnClickListener() {
+        builder.setSingleChoiceItems(items, Integer.parseInt(item_instituicao), new DialogInterface.OnClickListener() {
 
             public void onClick(DialogInterface dialog, int item) {
                 String instituicao = items[item];
                 editor.putString("instituicao", instituicao);
-                editor.putString("item", String.valueOf(item));
-                valor_atual = String.valueOf(item);
+                editor.putString("item_instituicao", String.valueOf(item));
+//                valor_atual = String.valueOf(item);
                 getSupportActionBar().setSubtitle(instituicao);
                 editor.apply();
                 alertDialog1.dismiss();
@@ -477,54 +567,209 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         alertDialog1.show();
     }
 
-    public void checkRow1(){
+    public boolean checkRow1()
+    {
+        if (imageView1.getDrawable()==null && imageView2.getDrawable()==null && imageView3.getDrawable()==null && imageView4.getDrawable()==null && imageView5.getDrawable()==null)
+        {
+            return false;
+        }
 
-        //first row
-            if(null==imageView1.getDrawable()
-            || null==imageView2.getDrawable()
-            || null==imageView3.getDrawable()
-            || null==imageView4.getDrawable()
-            || null==imageView5.getDrawable()){
+        if (imageView1.getDrawable()==null|| imageView2.getDrawable()==null|| imageView3.getDrawable()==null|| imageView4.getDrawable()==null || imageView5.getDrawable()==null)
+        {
+            return false;
+        }else{
+            valor_doacao=+1;
+            doacao.setText(String.valueOf(valor_doacao));
+            editor.putString("valor_doacao", String.valueOf(valor_doacao));
+            editor.apply();
+            return true;
+        }
+    }
 
-            }
-            else{
-                int valor_total = prefs.getInt("valor_total", 0);
+    public boolean checkRow2()
+    {
+        if (imageView6.getDrawable()==null && imageView7.getDrawable()==null && imageView8.getDrawable()==null && imageView9.getDrawable()==null)
+        {
+            return false;
+        }
 
-                if (valor_total>0){
+        if (imageView6.getDrawable()==null || imageView7.getDrawable()==null || imageView8.getDrawable()==null || imageView9.getDrawable()==null)
+        {
+            return false;
+        }
+        else{
+            valor_doacao=+1;
+            doacao.setText(String.valueOf(valor_doacao));
+            editor.putString("valor_doacao", String.valueOf(valor_doacao));
+            editor.apply();
+            return true;
+        }
+    }
 
-                }
-                else{
-                    valor_total= valor_total+1;
-                }
+    public boolean checkRow3()
+    {
+        if (imageView10.getDrawable()==null
+            && imageView11.getDrawable()==null
+            && imageView12.getDrawable()==null
+            && imageView13.getDrawable()==null)
+        {
+            return false;
+        }
 
-                editor.putInt("valor_total", valor_total);
-                editor.apply();
-                valor.setText(Double.toString(valor_total));
-            }
-        //
+        if (imageView10.getDrawable()==null
+                || imageView11.getDrawable()==null
+                || imageView12.getDrawable()==null
+                || imageView13.getDrawable()==null)
+        {
+            return false;
+        }
+        else{
+            valor_doacao=+1;
+            doacao.setText(String.valueOf(valor_doacao));
+            editor.putString("valor_doacao", String.valueOf(valor_doacao));
+            editor.apply();
+            return true;
+        }
     }
 
 
-    public void checkRow2(){
+    public boolean checkRow4()
+    {
+        if (imageView14.getDrawable()==null
+                && imageView15.getDrawable()==null
+                && imageView16.getDrawable()==null
+                && imageView17.getDrawable()==null)
+        {
+            return false;
+        }
 
-        if(null==imageView6.getDrawable()
-                || null==imageView7.getDrawable()
-                || null==imageView8.getDrawable()
-                || null==imageView9.getDrawable()){
+        if (imageView14.getDrawable()==null
+            || imageView15.getDrawable()==null
+            || imageView16.getDrawable()==null
+            || imageView17.getDrawable()==null)
+        {
+            return false;
         }
         else{
-            int valor_total = prefs.getInt("valor_total", 0);
-
-            if (valor_total>0){
-
-            }
-            else{
-                valor_total= valor_total+1;
-            }
-
-            editor.putInt("valor_total", valor_total);
+            valor_doacao=+1;
+            doacao.setText(String.valueOf(valor_doacao));
+            editor.putString("valor_doacao", String.valueOf(valor_doacao));
             editor.apply();
-            valor.setText(Double.toString(valor_total));
+            return true;
+        }
+    }
+
+    public boolean checkRow5()
+    {
+        if (imageView18.getDrawable()==null
+                && imageView19.getDrawable()==null
+                && imageView20.getDrawable()==null
+                && imageView21.getDrawable()==null)
+        {
+            return false;
+        }
+        if (imageView18.getDrawable()==null
+                || imageView19.getDrawable()==null
+                || imageView20.getDrawable()==null
+                || imageView21.getDrawable()==null)
+        {
+            return false;
+        }
+        else{
+            valor_doacao=+1;
+            doacao.setText(String.valueOf(valor_doacao));
+            editor.putString("valor_doacao", String.valueOf(valor_doacao));
+            editor.apply();
+            return true;
+        }
+    }
+
+    public class submeterDados extends AsyncTask<String, Void, String> {
+
+        protected void onPreExecute() {
+
+        }
+
+        protected String doInBackground(String... arg0) {
+
+            HttpURLConnection conn = null;
+            BufferedReader reader = null;
+
+            String servico_id = arg0[0];
+
+            try {
+
+                URL url = new URL(util.url+"?acao=buscaServicosPorId");
+
+                JSONObject postDataParams = new JSONObject();
+                postDataParams.put("a1", "");
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setReadTimeout(15000);
+                conn.setConnectTimeout(15000);
+                conn.setRequestMethod("POST");
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(os, "UTF-8"));
+                writer.write(util.getPostDataString(postDataParams));
+
+                writer.flush();
+                writer.close();
+                os.close();
+
+                //Get Response
+                InputStream is = conn.getInputStream();
+                BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+                String line;
+                StringBuffer response = new StringBuffer();
+                while ((line = rd.readLine()) != null) {
+                    response.append(line);
+                    response.append('\r');
+                }
+                rd.close();
+                return response.toString();
+
+            } catch (Exception e) {
+                //return new String("Exception: " + e.getMessage());
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+
+            if (result != null)
+            {
+
+                String id = "";
+                String servico = "";
+                String imagem = "";
+                String categoria_id = "";
+                String descricao = "";
+                String valor = "";
+                String cidade = "";
+
+                try {
+                    JSONObject jsonObject = new JSONObject(result);
+                    JSONArray jsonArray =  jsonObject.getJSONArray("resultado");
+
+                    for(int i =0;i<jsonArray.length(); i++)
+                    {
+                        JSONObject productObject = jsonArray.getJSONObject(i);
+                        id = productObject.getString("id");
+                        String mensagem = productObject.getString("mensagem");
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+
+            }
         }
     }
 }
