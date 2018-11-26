@@ -55,9 +55,9 @@ import java.util.Iterator;
 public class LoginActivity extends AppCompatActivity {
 
     Util util;
-    String email;
+    String login;
     String password;
-    EditText Email;
+    EditText Login;
     EditText Password;
     public static final String MY_PREFS_NAME = "MyPrefsFile";
     private Boolean saveLogin;
@@ -65,7 +65,6 @@ public class LoginActivity extends AppCompatActivity {
     private SharedPreferences loginPreferences;
     private SharedPreferences.Editor loginPrefsEditor;
     ProgressBar progressBar;
-    String acao;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +79,7 @@ public class LoginActivity extends AppCompatActivity {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
 
-        Email = (EditText) findViewById(R.id.email);
+        Login = (EditText) findViewById(R.id.login);
         Password = (EditText) findViewById(R.id.password);
         progressBar = (ProgressBar) findViewById(R.id.progressbar);
 
@@ -90,23 +89,17 @@ public class LoginActivity extends AppCompatActivity {
         saveLogin = loginPreferences.getBoolean("saveLogin", false);
 
         if (saveLogin == true) {
-            Email.setText(loginPreferences.getString("email", ""));
+            Login.setText(loginPreferences.getString("login", ""));
             Password.setText(loginPreferences.getString("password", ""));
             saveLoginCheckBox.setChecked(true);
         }
-
-        Button btn_sign_in = (Button) findViewById(R.id.btn_sign_in);
-        btn_sign_in.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-            }
-        });
 
         Button btn_login = (Button) findViewById(R.id.btn_login);
         btn_login.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Toast.makeText(LoginActivity.this, "async login", Toast.LENGTH_SHORT).show();
+//                validarDados();
                 Intent i = new Intent(LoginActivity.this, MainActivity.class);
                 startActivity(i);
             }
@@ -134,24 +127,14 @@ public class LoginActivity extends AppCompatActivity {
         return true;
     }
 
-    public static boolean hasPermissions(Context context, String... permissions) {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
-            for (String permission : permissions) {
-                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
 
     private boolean validarDados() {
 
-        email = Email.getText().toString();
+        login = Login.getText().toString();
         password = Password.getText().toString();
 
-        if (email.matches("")) {
-            Toast.makeText(this, "Insira um email válido!", Toast.LENGTH_SHORT).show();
+        if (login.matches("")) {
+            Toast.makeText(this, "Insira um login válido!", Toast.LENGTH_SHORT).show();
             return false;
         }
 
@@ -160,13 +143,14 @@ public class LoginActivity extends AppCompatActivity {
             return false;
         }
 
+        new acessarPainel().execute();
         return true;
     }
 
     private void saveLogin() {
         if (saveLoginCheckBox.isChecked()) {
             loginPrefsEditor.putBoolean("saveLogin", true);
-            loginPrefsEditor.putString("email", email);
+            loginPrefsEditor.putString("email", login);
             loginPrefsEditor.putString("password", password);
             loginPrefsEditor.putString("session", "1");
             loginPrefsEditor.commit();
@@ -179,8 +163,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        SharedPreferences.Editor editor = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE).edit();
-        editor.clear();
+
     }
 
     @Override
@@ -209,7 +192,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
 
-    public class acessarConta extends AsyncTask<String, Void, String> {
+    public class acessarPainel extends AsyncTask<String, Void, String> {
 
         protected void onPreExecute() {
             progressBar.setVisibility(View.VISIBLE);
@@ -220,7 +203,7 @@ public class LoginActivity extends AppCompatActivity {
             HttpURLConnection conn = null;
             BufferedReader reader = null;
 
-            email = Email.getText().toString();
+            login = Login.getText().toString();
             password = Password.getText().toString();
 
             try {
@@ -228,8 +211,8 @@ public class LoginActivity extends AppCompatActivity {
                 URL url = new URL(util.url + "?acao=acessarConta");
 
                 JSONObject postDataParams = new JSONObject();
-                postDataParams.put("email", email);
-                postDataParams.put("senha", password);
+                postDataParams.put("login", login);
+                postDataParams.put("password", password);
 
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setReadTimeout(15000);
@@ -282,16 +265,10 @@ public class LoginActivity extends AppCompatActivity {
 
                         String mensagem = productObject.getString("mensagem");
                         String token = productObject.getString("token");
-                        String email = productObject.getString("email");
-                        String login = "1";
-                        String logomarca = productObject.getString("logomarca");
-                        String situacao = productObject.getString("situacao");
-                        String perfil = productObject.getString("perfil");
-
 
                         if (mensagem.equals("ok")){
                             saveLogin();
-                            abrirPainel(token,email,login,logomarca,situacao,perfil);
+                            abrirPainel(token);
                         }
                         else
                         {
@@ -306,36 +283,10 @@ public class LoginActivity extends AppCompatActivity {
             }
         }
 
-        public void abrirPainel(String token, String email, String login, String logomarca, String situacao,String perfil) {
-
+        public void abrirPainel(String token) {
             SharedPreferences.Editor editor = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE).edit();
-
             editor.putString("token", token);
-            editor.putString("email", email);
-            editor.putString("login", login);
-            editor.putString("situacao", situacao);
-            editor.putString("logomarca", logomarca);
-            editor.putString("perfil", perfil);
-
             editor.apply();
-
-            switch (acao) {
-                case "cadastrar_servico":
-                    Intent iinent= new Intent(LoginActivity.this,MainActivity.class);
-                    startActivity(iinent);
-                    finish();
-                    break;
-
-                case "visualizar_perfil":
-                    Intent iinent3= new Intent(LoginActivity.this,MainActivity.class);
-                    startActivity(iinent3);
-                    finish();
-                    break;
-
-                default:
-                    startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                    break;
-            }
         }
     }
 }

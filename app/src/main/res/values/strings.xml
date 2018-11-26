@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">Multgame</string>
+    <string name="app_name">Doação</string>
+    <string name="Open">Open</string>
+    <string name="Close">Close</string>
+    <string name="campeao_da_hora">Campeão da hora</string>
+    <string name="title_activity_profile">ProfileActivity</string>
 </resources>

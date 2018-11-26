@@ -25,6 +25,10 @@ public class ListActivity extends AppCompatActivity implements MyRecyclerViewAda
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
 
+        getSupportActionBar().setTitle("Doação");
+        getSupportActionBar().setSubtitle("Selecione a instituição para doar");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
         editor = getSharedPreferences(Myprefs, MODE_PRIVATE).edit();
         prefs = getSharedPreferences(Myprefs, MODE_PRIVATE);
 
@@ -41,6 +45,7 @@ public class ListActivity extends AppCompatActivity implements MyRecyclerViewAda
 
         recyclerView.addItemDecoration(new DividerItemDecoration(this,
                 DividerItemDecoration.VERTICAL));
+
     }
 
     @Override
