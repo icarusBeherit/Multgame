@@ -490,7 +490,7 @@
                 android:id="@+id/btCampeaoDaHora"
                 android:layout_width="170dp"
                 android:layout_height="63dp"
-                android:layout_alignBottom="@+id/etCampeaoHora"
+                android:layout_alignBottom="@+id/txValorCampeaoHora"
                 android:layout_alignParentStart="true"
                 android:layout_marginStart="21dp"
                 android:fontFamily="sans-serif-medium"
@@ -500,12 +500,12 @@
                 android:text="Adicionar CH" />
 
             <TextView
-                android:id="@+id/etCampeaoHora"
-                android:layout_width="124dp"
+                android:id="@+id/txValorCampeaoHora"
+                android:layout_width="166dp"
                 android:layout_height="58dp"
                 android:layout_alignEnd="@+id/submit"
                 android:layout_alignParentTop="true"
-                android:layout_marginEnd="25dp"
+                android:layout_marginEnd="-17dp"
                 android:layout_marginTop="18dp"
                 android:fontFamily="sans-serif-medium"
                 android:padding="10dp"
@@ -516,7 +516,7 @@
                 android:id="@+id/doacao"
                 android:layout_width="148dp"
                 android:layout_height="66dp"
-                android:layout_alignStart="@+id/etCampeaoHora"
+                android:layout_alignStart="@+id/txValorCampeaoHora"
                 android:layout_alignTop="@+id/textView"
                 android:fontFamily="sans-serif-medium"
                 android:padding="10dp"

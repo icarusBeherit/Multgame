@@ -75,7 +75,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
     Button submit;
     Button clear;
     String instituicao;
-    String valor_campeao_hora;
+    double valor_campeao_hora;
     String item_instituicao;
     TextView doacao;
     Util util;
@@ -110,6 +110,8 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
     Locale mLocale;
     TextView valorCampeaoHora;
     Button buttonCh;
+    BigDecimal parsed;
+
 
 
     @Override
@@ -122,14 +124,12 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         prefs = getSharedPreferences(Myprefs, MODE_PRIVATE);
         instituicao = prefs.getString("instituicao", "");
         item_instituicao = prefs.getString("item_instituicao", "");
-        valor_campeao_hora = prefs.getString("valor_campeao_hora", "");
 
         submit = findViewById(R.id.submit);
         clear = findViewById(R.id.clear);
         doacao = findViewById(R.id.doacao);
 
         mLocale = new Locale("pt", "BR");
-
 
         String mystring = getResources().getString(R.string.app_name);
 
@@ -196,7 +196,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
        imageView21.setOnClickListener(this);
        //
 
-        valorCampeaoHora = findViewById(R.id.etCampeaoHora);
+        valorCampeaoHora = findViewById(R.id.txValorCampeaoHora);
 
         checkSharedPreferences();
         calculaDoacao();
@@ -316,6 +316,8 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         final EditText nome = (EditText) view.findViewById(R.id.input_nome);
         final EditText telefone = (EditText) view.findViewById(R.id.input_telefone);
 
+        telefone.addTextChangedListener(Mask.insert("(##)#####-####", telefone));
+
         alertDialog.setView(view);
 
         alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancelar",
@@ -328,9 +330,8 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-//                        submitData();
 
-                        Intent i = new Intent(getBaseContext(), PrintActivity.class);
+                        Intent i = new Intent(SelectActivity.this, PrintActivity.class);
                         finish();
                         startActivity(i);
 
@@ -350,8 +351,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         final EditText valor = (EditText) view.findViewById(R.id.input_valor);
         valor.requestFocus();
 
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.showSoftInput(valor, InputMethodManager.SHOW_IMPLICIT);
+        ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE)).toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
 
         final Locale mLocale = new Locale("pt", "BR");
 
@@ -371,7 +371,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
                 if (editable == null) return;
                 valor.removeTextChangedListener(this);
 
-                BigDecimal parsed = parseToBigDecimal(editable.toString(), mLocale);
+                parsed = parseToBigDecimal(editable.toString(), mLocale);
                 String formatted = NumberFormat.getCurrencyInstance(mLocale).format(parsed);
 
                 valor.setText(formatted);
@@ -393,11 +393,28 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        Toast.makeText(SelectActivity.this, "calcular", Toast.LENGTH_SHORT).show();
+                        ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(valor.getWindowToken(), 0);
+                        setaValor();
                     }
                 });
 
         alertDialog.show();
+
+    }
+
+    public void setaValor(){
+
+        valor_campeao_hora = parsed.doubleValue();
+
+        Locale mLocale = new Locale("pt", "BR");
+
+        double resultado = valor_campeao_hora;
+
+        String valorString = NumberFormat.getCurrencyInstance(mLocale).format(resultado);
+
+        calculaDoacao();
+
+        valorCampeaoHora.setText(valorString);
 
     }
 
@@ -698,16 +715,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
 
     private void calculaDoacao() {
 
-        double valor_campeao_hora = 0;
         double total_doacao=0;
-
-        String txValor = valorCampeaoHora.getText().toString();
-
-        if (txValor.equals("")){
-            txValor = "0.00";
-        }
-
-        valor_campeao_hora = Double.parseDouble(txValor);
 
         a1 = prefs.getString("a1", "");
         a2 = prefs.getString("a2", "");
@@ -719,7 +727,6 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
             buttonCh.setEnabled(true);
             buttonCh.setTextColor(getApplication().getResources().getColor(R.color.white));
         }
-
 
         if(!a1.equals("") && !a2.equals("") && !a3.equals("") && !a4.equals("") && !a5.equals("")){
             total_doacao = total_doacao +1;
@@ -763,6 +770,7 @@ public class SelectActivity extends AppCompatActivity implements View.OnClickLis
         }
 
         Locale mLocale = new Locale("pt", "BR");
+
         double resultado = valor_campeao_hora + total_doacao;
 
         String valorString = NumberFormat.getCurrencyInstance(mLocale).format(resultado);
